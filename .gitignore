@@ -5,6 +5,6 @@ albums/**/*.png
 albums/**/*.webp
 
 # Служебные файлы и папки сборки
-dist/
 node_modules/
 .DS_Store
+dist/
