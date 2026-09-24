@@ -1,10 +1,10 @@
+# Игнорируем тяжелые изображения, но оставляем структуру папок
+albums/**/*.jpg
+albums/**/*.jpeg
+albums/**/*.png
+albums/**/*.webp
+
+# Служебные файлы и папки сборки
 dist/
+node_modules/
 .DS_Store
-токен.txt
-dist/
-dist/
-токен.txt
-dist/
-dist/
-dist/
-albums/
