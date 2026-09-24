@@ -10,7 +10,7 @@ const SITE_PASSWORD = 'aura';
 
 // Флаг для GitHub Pages (абсолютные пути с учетом подпапки репозитория)
 // Если тестируешь локально без сервера и хочешь открывать файлы двойным кликом — поставь false
-const IS_GITHUB_PAGES = true; 
+const IS_GITHUB_PAGES = false; 
 const REPO_NAME = 'aura-catalogue';
 
 const TRENDING_PATHS = [
