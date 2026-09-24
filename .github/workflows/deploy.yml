@@ -27,7 +27,9 @@ jobs:
           node-version: "20"
 
       - name: Build site
-        run: node build.js
+        run: |
+          mkdir -p dist
+          node build.js
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
