@@ -9,7 +9,6 @@ const DIST_ALBUMS_DIR = path.join(DIST_DIR, 'albums');
 const SITE_PASSWORD = 'aura';
 
 // Флаг для GitHub Pages (абсолютные пути с учетом подпапки репозитория)
-// Если тестируешь локально без сервера и хочешь открывать файлы двойным кликом — поставь false
 const IS_GITHUB_PAGES = true; 
 const REPO_NAME = 'aura-catalogue';
 
@@ -303,8 +302,18 @@ const getPasswordAndLightboxScript = (isProductPage) => `
     </script>
 `;
 
-function createPage(filePath, title, backHref, backText, headerTitle, contentHtml, isProductPage = false) {
-    let navLinksHtml = `<a href="${backHref}" class="nav-link">← ${backText}</a>`;
+function getAbsoluteUrl(subPath) {
+    // subPath должен начинаться без слэша, например "albums/womens/index.html"
+    if (IS_GITHUB_PAGES) {
+        return `/${REPO_NAME}/${subPath}`;
+    }
+    // Для локального теста вернем относительный путь от корня dist через слэш или префикс
+    return `/${subPath}`;
+}
+
+function createPage(filePath, title, backSubPath, backText, headerTitle, contentHtml, isProductPage = false) {
+    const backUrl = getAbsoluteUrl(backSubPath);
+    let navLinksHtml = `<a href="${backUrl}" class="nav-link">← ${backText}</a>`;
 
     const html = `<!DOCTYPE html>
 <html lang="ru">
@@ -329,7 +338,7 @@ function createPage(filePath, title, backHref, backText, headerTitle, contentHtm
     fs.writeFileSync(filePath, html, 'utf-8');
 }
 
-function renderCoverHtml(htmlFilePath, targetDir) {
+function renderCoverHtml(targetDir) {
     if (!fs.existsSync(targetDir)) return `<img src="" alt="placeholder" loading="lazy">`;
     
     let candidateImages = findFirstImages(targetDir, 4);
@@ -339,13 +348,13 @@ function renderCoverHtml(htmlFilePath, targetDir) {
     }
     
     if (candidateImages.length === 1) {
-        const rel = computeRelativePath(htmlFilePath, candidateImages[0]);
+        const rel = computeRelativePath(candidateImages[0]);
         return `<img src="${rel}" alt="cover" loading="lazy">`;
     } 
     
     let collageImgs = '';
     candidateImages.slice(0, 4).forEach(img => {
-        const rel = computeRelativePath(htmlFilePath, img);
+        const rel = computeRelativePath(img);
         collageImgs += `<div class="collage-cell"><img src="${rel}" alt="cover" loading="lazy"></div>`;
     });
     
@@ -373,9 +382,10 @@ function buildSite() {
         const fullDirPath = path.join(DIST_ALBUMS_DIR, relPath);
         if (fs.existsSync(fullDirPath)) {
             const folderName = path.basename(fullDirPath);
-            const coverHtml = renderCoverHtml(distIndex, fullDirPath);
+            const coverHtml = renderCoverHtml(fullDirPath);
+            const itemUrl = getAbsoluteUrl(`albums/${relPath}/index.html`);
             trendingGrid += `
-                <a href="albums/${relPath}/index.html" class="gallery-item">
+                <a href="${itemUrl}" class="gallery-item">
                     ${coverHtml}
                     <div class="item-title">${folderName}</div>
                 </a>
@@ -394,9 +404,10 @@ function buildSite() {
     let sectionsGrid = '';
     rootSections.forEach(section => {
         const sectionPath = path.join(DIST_ALBUMS_DIR, section);
-        const coverHtml = renderCoverHtml(distIndex, sectionPath);
+        const coverHtml = renderCoverHtml(sectionPath);
+        const sectionUrl = getAbsoluteUrl(`albums/${section}/index.html`);
         sectionsGrid += `
-            <a href="albums/${section}/index.html" class="gallery-item">
+            <a href="${sectionUrl}" class="gallery-item">
                 ${coverHtml}
                 <div class="item-title">${section}</div>
             </a>
@@ -419,16 +430,17 @@ function buildSite() {
         let catGrid = '';
         categories.forEach(category => {
             const catPath = path.join(sectionDir, category);
-            const coverHtml = renderCoverHtml(sectionHtmlPath, catPath);
+            const coverHtml = renderCoverHtml(catPath);
+            const catUrl = getAbsoluteUrl(`albums/${section}/${category}/index.html`);
             catGrid += `
-                <a href="${category}/index.html" class="gallery-item">
+                <a href="${catUrl}" class="gallery-item">
                     ${coverHtml}
                     <div class="item-title">${category}</div>
                 </a>
             `;
         });
 
-        createPage(sectionHtmlPath, section, '../../index.html', 'На главную', section, `<div class="gallery-grid">${catGrid}</div>`, false);
+        createPage(sectionHtmlPath, section, `index.html`, 'На главную', section, `<div class="gallery-grid">${catGrid}</div>`, false);
         
         categories.forEach(category => {
             const catDir = path.join(sectionDir, category);
@@ -438,16 +450,17 @@ function buildSite() {
             let brandGrid = '';
             brands.forEach(brand => {
                 const brandPath = path.join(catDir, brand);
-                const coverHtml = renderCoverHtml(catHtmlPath, brandPath);
+                const coverHtml = renderCoverHtml(brandPath);
+                const brandUrl = getAbsoluteUrl(`albums/${section}/${category}/${brand}/index.html`);
                 brandGrid += `
-                    <a href="${brand}/index.html" class="gallery-item">
+                    <a href="${brandUrl}" class="gallery-item">
                         ${coverHtml}
                         <div class="item-title">${brand}</div>
                     </a>
                 `;
             });
 
-            createPage(catHtmlPath, `${section} - ${category}`, '../index.html', `Назад в ${section.toUpperCase()}`, category, `<div class="gallery-grid">${brandGrid}</div>`, false);
+            createPage(catHtmlPath, `${section} - ${category}`, `albums/${section}/index.html`, `Назад в ${section.toUpperCase()}`, category, `<div class="gallery-grid">${brandGrid}</div>`, false);
 
             brands.forEach(brand => {
                 const brandDir = path.join(catDir, brand);
@@ -457,16 +470,17 @@ function buildSite() {
                 let modelGrid = '';
                 models.forEach(model => {
                     const modelPath = path.join(brandDir, model);
-                    const coverHtml = renderCoverHtml(brandHtmlPath, modelPath);
+                    const coverHtml = renderCoverHtml(modelPath);
+                    const modelUrl = getAbsoluteUrl(`albums/${section}/${category}/${brand}/${model}/index.html`);
                     modelGrid += `
-                        <a href="${model}/index.html" class="gallery-item">
+                        <a href="${modelUrl}" class="gallery-item">
                             ${coverHtml}
                             <div class="item-title">${model}</div>
                         </a>
                     `;
                 });
 
-                createPage(brandHtmlPath, brand, '../index.html', `Назад в ${category.toUpperCase()}`, brand, `<div class="gallery-grid">${modelGrid}</div>`, false);
+                createPage(brandHtmlPath, brand, `albums/${section}/${category}/index.html`, `Назад в ${category.toUpperCase()}`, brand, `<div class="gallery-grid">${modelGrid}</div>`, false);
 
                 models.forEach(model => {
                     const modelDir = path.join(brandDir, model);
@@ -475,7 +489,7 @@ function buildSite() {
 
                     let photoGrid = '';
                     files.forEach(file => {
-                        const relImgPath = computeRelativePath(modelHtmlPath, path.join(modelDir, file));
+                        const relImgPath = computeRelativePath(path.join(modelDir, file));
                         photoGrid += `
                             <div class="gallery-item">
                                 <img src="${relImgPath}" alt="${model}" loading="lazy">
@@ -483,7 +497,7 @@ function buildSite() {
                         `;
                     });
 
-                    createPage(modelHtmlPath, `${brand} - ${model}`, '../index.html', `Назад в ${brand.toUpperCase()}`, model, `<div class="gallery-grid">${photoGrid}</div>`, true);
+                    createPage(modelHtmlPath, `${brand} - ${model}`, `albums/${section}/${category}/${brand}/index.html`, `Назад в ${brand.toUpperCase()}`, model, `<div class="gallery-grid">${photoGrid}</div>`, true);
                 });
             });
         });
@@ -561,13 +575,12 @@ function findFirstImages(dir, limit = 4) {
     return collectedImages.slice(0, limit);
 }
 
-function computeRelativePath(fromHtml, toFile) {
+function computeRelativePath(toFile) {
     const relFromDist = path.relative(DIST_DIR, toFile).replace(/\\/g, '/');
     if (IS_GITHUB_PAGES) {
         return `/${REPO_NAME}/${relFromDist}`;
     }
-    const fromDir = path.dirname(fromHtml);
-    return path.relative(fromDir, toFile).replace(/\\/g, '/');
+    return `/${relFromDist}`;
 }
 
 buildSite();
